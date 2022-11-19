@@ -1,0 +1,9 @@
+libmultilabel==0.1.5
+nltk==3.7
+numpy==1.23.4
+pandas==1.5.1
+scipy==1.9.3
+sentence-transformers==2.2.2
+spacy==3.4.3
+torch==1.12.1
+transformers==4.24.0
