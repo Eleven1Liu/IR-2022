@@ -1,11 +1,10 @@
 import argparse
-import torch
 import yaml
 
 from data_utils import load_data, sentencize_docs
 from evaluate import group_ground_truth, score
+from rankers import CosSimilarity, NLI
 from libmultilabel.common_utils import Timer, AttributeDict
-from sentence_transformers import SentenceTransformer, util
 
 
 def main():
@@ -28,31 +27,27 @@ def main():
     r_ind, r_all_sents = sentencize_docs(df_["r"])
     print(f"Load {len(q_all_sents)} q sentences and {len(r_all_sents)} r sentences.")
 
-    # Load model from HuggingFace Hub
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    q_embeds = model.encode(q_all_sents)
-    r_embeds = model.encode(r_all_sents)
+    # Load rankers
+    ranker = CosSimilarity()
+    scores = ranker.predict(q_all_sents, r_all_sents, q_ind, r_ind)
+    selected_indexes = ranker.rank(scores, df_["s"])
 
-    # Group q_embeds by q_ind
     num_instances = len(df_)
     scores = list()
     for i in range(num_instances):
-        qs, qe = q_ind[i]
-        rs, re = r_ind[i]
-        cos_sim = util.cos_sim(q_embeds[qs:qe], r_embeds[rs:re])
-        if df_["s"][i] == "DISAGREE":
-            x = torch.argmin(cos_sim).item()
-        else:
-            x = torch.argmax(cos_sim).item()
-        qi, ri = x // cos_sim.shape[1], x % cos_sim.shape[1]
+        qs, rs = q_ind[i][0], r_ind[i][0]
         id_ = df_["id"][i]
-        s = score(q_all_sents[qs+qi], r_all_sents[rs+ri],
-                  q_true[id_], r_true[id_])
+        qi, ri = selected_indexes[i]
+        s = score(q_all_sents[qs+qi], r_all_sents[rs+ri], q_true[id_], r_true[id_])
         scores.append(s)
 
     final_score = sum(scores) / (2*num_instances)
     print(f"Collect {len(scores)} scores.")
     print(f"Score: {final_score}")
+
+
+    # NLI
+    # https://github.com/UKPLab/sentence-transformers/blob/master/examples/training/nli/training_nli_v2.py
 
 
 if __name__ == '__main__':
