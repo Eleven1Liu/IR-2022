@@ -39,22 +39,8 @@ def main():
     scores = ranker.predict(q_all_sents, r_all_sents, q_ind, r_ind)
     selected_indexes = ranker.rank(scores, df_["s"])
 
-    num_instances = len(df_)
-    scores = list()
-    q_outs, r_outs = list(), list()
-    for i in range(num_instances):
-        # start + offset
-        qi = q_ind[i][0] + selected_indexes[i] // (r_ind[i][1]-r_ind[i][0])
-        ri = r_ind[i][0] + selected_indexes[i] % (r_ind[i][1]-r_ind[i][0])
-        id_ = df_["id"][i]
-        s = score(q_all_sents[qi], r_all_sents[ri], q_true[id_], r_true[id_])
-        q_outs.append(q_all_sents[qi])
-        r_outs.append(r_all_sents[ri])
-        scores.append(s)
-
-    final_score = sum(scores) / (2*num_instances)
-    logging.info(f"Score: {final_score}")
-
+    q_outs, r_outs, scores = score(
+        q_all_sents, r_all_sents, q_true, r_true, q_ind, r_ind, selected_indexes)
     write_results(q_outs, r_outs, config.output_path)
 
 
