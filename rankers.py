@@ -2,8 +2,7 @@ import itertools
 
 import torch
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
-
-from evaluate import score
+from tqdm import tqdm
 
 
 class Ranker():
@@ -40,7 +39,7 @@ class CosSimilarity(Ranker):
         num_instances = len(q_indexes)
 
         scores = list()
-        for i in range(num_instances):
+        for i in tqdm(range(num_instances)):
             qs, qe = q_indexes[i]
             rs, re = r_indexes[i]
             cos_sim = util.cos_sim(q_embeds[qs:qe], r_embeds[rs:re])
@@ -63,8 +62,6 @@ class CosSimilarity(Ranker):
                 x = torch.argmax(cos_sim).item()
             else:
                 x = torch.argmin(cos_sim).item()
-            # qi, ri = x // cos_sim.shape[1], x % cos_sim.shape[1]
-            # selected_indexes.append((qi, ri))
             selected_indexes.append(x)
         return selected_indexes
 
@@ -94,7 +91,7 @@ class NLI(Ranker):
         """
         num_instances = len(q_indexes)
         scores = list()
-        for i in range(num_instances):
+        for i in tqdm(range(num_instances)):
             qs, qe = q_indexes[i]
             rs, re = r_indexes[i]
             sent_pairs = [(q, r) for q, r in itertools.product(queries[qs:qe], responses[rs:re])]
@@ -108,8 +105,15 @@ class NLI(Ranker):
     def rank(self, scores, states):
         selected_indexes = list()
         for i, score in enumerate(scores):
-            # contradiction: 0, entailment: 1
-            s = score[:, 1] if states[i] == "AGREE" else score[:, 0]
+            # contradiction: 0, entailment: 1, neural: 2
+            # s = score[:, 1] if states[i] == "AGREE" else score[:, 0]
+            if states[i] == "AGREE":
+                entail_max = torch.argmax(score[:, 1])
+                neural_max = torch.argmax(score[:, 2])
+                s = score[:, 1] if entail_max > neural_max else score[:, 2]
+            else:
+                s = score[:, 0]
+
             x = torch.argmax(s).item()
             selected_indexes.append(x)
         return selected_indexes

@@ -1,4 +1,5 @@
 import argparse
+import sys
 import yaml
 
 from data_utils import load_data, sentencize_docs
@@ -28,7 +29,7 @@ def main():
     print(f"Load {len(q_all_sents)} q sentences and {len(r_all_sents)} r sentences.")
 
     # Load rankers
-    ranker = NLI()
+    ranker = getattr(sys.modules[__name__], config.ranker)()
     scores = ranker.predict(q_all_sents, r_all_sents, q_ind, r_ind)
     selected_indexes = ranker.rank(scores, df_["s"])
 
