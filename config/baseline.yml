@@ -1,2 +1,3 @@
 train_path: data/train.csv
-ranker: NLI
+ranker: CosSimilarity
+output_path: output/predictions.csv

@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 from spacy.lang.en import English
 
@@ -44,3 +46,21 @@ def sentencize_docs(docs):
         index.append((s, s+len(sents)))
         s += len(sents)
     return index, all_sents
+
+
+def write_results(queries, responses, output_path):
+    """Output `q'` and `r'`.
+
+    Args:
+        queries (list): list of predicted `q'`
+        responses (list): list of predicted `r'`
+        output_path (str): output path
+    """
+    assert len(queries) == len(responses)
+    df = pd.DataFrame({
+        "q'": queries,
+        "r'": responses
+    })
+    df.to_csv(output_path, index=False)
+    logging.info("Write the %d results to %s." %
+                 (len(queries), output_path))
