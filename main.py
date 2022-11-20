@@ -28,26 +28,22 @@ def main():
     print(f"Load {len(q_all_sents)} q sentences and {len(r_all_sents)} r sentences.")
 
     # Load rankers
-    ranker = CosSimilarity()
+    ranker = NLI()
     scores = ranker.predict(q_all_sents, r_all_sents, q_ind, r_ind)
     selected_indexes = ranker.rank(scores, df_["s"])
 
     num_instances = len(df_)
     scores = list()
     for i in range(num_instances):
-        qs, rs = q_ind[i][0], r_ind[i][0]
+        # start + offset
+        qi = q_ind[i][0] + selected_indexes[i] // (r_ind[i][1]-r_ind[i][0])
+        ri = r_ind[i][0] + selected_indexes[i] % (r_ind[i][1]-r_ind[i][0])
         id_ = df_["id"][i]
-        qi, ri = selected_indexes[i]
-        s = score(q_all_sents[qs+qi], r_all_sents[rs+ri], q_true[id_], r_true[id_])
+        s = score(q_all_sents[qi], r_all_sents[ri], q_true[id_], r_true[id_])
         scores.append(s)
 
     final_score = sum(scores) / (2*num_instances)
-    print(f"Collect {len(scores)} scores.")
     print(f"Score: {final_score}")
-
-
-    # NLI
-    # https://github.com/UKPLab/sentence-transformers/blob/master/examples/training/nli/training_nli_v2.py
 
 
 if __name__ == '__main__':

@@ -1,5 +1,4 @@
 import itertools
-import logging
 
 import torch
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
@@ -25,19 +24,20 @@ class CosSimilarity(Ranker):
         self.model = SentenceTransformer(self.model_name)
 
     def predict(self, queries, responses, q_indexes, r_indexes):
-        """
+        """Cosine similarity scores of (q, r) sentence pairs.
 
         Args:
-            queries (_type_): _description_
-            responses (_type_): _description_
-            q_indexes (_type_): _description_
-            r_indexes (_type_): _description_
+            queries (list): list of query sentences
+            responses (list): list of responses sentences
+            q_indexes (list): the `queries` offsets for each training instance
+            r_indexes (list): the `responses` offsets for each training instance
+
+        Returns:
+            List[torch.tensor]: List of len(q)*len(r) cosine similarity scores.
         """
         q_embeds = self.model.encode(queries)
         r_embeds = self.model.encode(responses)
-
         num_instances = len(q_indexes)
-        logging.info(f'Load {num_instances} instances.')
 
         scores = list()
         for i in range(num_instances):
@@ -63,8 +63,9 @@ class CosSimilarity(Ranker):
                 x = torch.argmax(cos_sim).item()
             else:
                 x = torch.argmin(cos_sim).item()
-            qi, ri = x // cos_sim.shape[1], x % cos_sim.shape[1]
-            selected_indexes.append((qi, ri))
+            # qi, ri = x // cos_sim.shape[1], x % cos_sim.shape[1]
+            # selected_indexes.append((qi, ri))
+            selected_indexes.append(x)
         return selected_indexes
 
 
@@ -78,11 +79,37 @@ class NLI(Ranker):
     def _load_model(self):
         self.model = CrossEncoder(self.encoder_name)
 
-    def predict(self, queries, responses):
-        sent_pairs = [(q,r) for q, r in itertools.product(queries, responses)]
-        scores = self.model.predict(sent_pairs)
-        # labels = [self.label_names[score_max] for score_max in scores.argmax(axis=1)]
+    def predict(self, queries, responses, q_indexes, r_indexes):
+        """Contradiction, entailment, and neutral scores of (q, r) sentence pairs.
+         TODO batch eval
+
+        Args:
+            queries (list): list of query sentences
+            responses (list): list of responses sentences
+            q_indexes (list): the `queries` offsets for each training instance
+            r_indexes (list): the `responses` offsets for each training instance
+
+        Returns:
+            numpy.ndarray: contradiction, entailment, and neutral scores for query-response pairs.
+        """
+        num_instances = len(q_indexes)
+        scores = list()
+        for i in range(num_instances):
+            qs, qe = q_indexes[i]
+            rs, re = r_indexes[i]
+            sent_pairs = [(q, r) for q, r in itertools.product(queries[qs:qe], responses[rs:re])]
+            score = self.model.predict(
+                sent_pairs, convert_to_numpy=False, convert_to_tensor=True)
+            # labels = [self.label_names[score_max]
+            #           for score_max in score.argmax(axis=1)]
+            scores.append(score)
         return scores
 
     def rank(self, scores, states):
-        pass
+        selected_indexes = list()
+        for i, score in enumerate(scores):
+            # contradiction: 0, entailment: 1
+            s = score[:, 1] if states[i] == "AGREE" else score[:, 0]
+            x = torch.argmax(s).item()
+            selected_indexes.append(x)
+        return selected_indexes
