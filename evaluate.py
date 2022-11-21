@@ -2,6 +2,14 @@ import logging
 import nltk
 nltk.download('punkt')
 
+PUNCTUATIONS = set([c for c in """!"#$%&'()*+, -./:;<=>?@[\]^_`{|}~"""])
+
+
+def tokenize(text):
+    """Tokenize text and remove punctuations."""
+    tokens = nltk.word_tokenize(text)
+    return [c for c in tokens if c not in PUNCTUATIONS]
+
 
 def group_ground_truth(df):
     """Group ground truth by id.
@@ -19,7 +27,7 @@ def group_ground_truth(df):
 
 
 def score(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_indexes):
-    """_summary_
+    """Calculate prediction score.
 
     Args:
         queries (list): list of query sentences
@@ -58,15 +66,17 @@ def score_one(q_pred, r_pred, q_true: list, r_true: list):
     Returns:
         int: max score of the prediction and the ground truth
     """
-    q_pred_toks = nltk.word_tokenize(q_pred)
-    r_pred_toks = nltk.word_tokenize(r_pred)
+    q_pred_toks = tokenize(q_pred)
+    r_pred_toks = tokenize(r_pred)
 
     score = 0
     for j in range(len(q_true)):
-        q_true_toks = nltk.word_tokenize(q_true[j])
-        r_true_toks = nltk.word_tokenize(r_true[j])
-        q_score = lcs(q_pred_toks, q_true_toks) / len(set(q_pred_toks + q_true_toks))
-        r_score = lcs(r_pred_toks, r_true_toks) / len(set(r_pred_toks + r_true_toks))
+        q_true_toks = tokenize(q_true[j])
+        r_true_toks = tokenize(r_true[j])
+        q_lcs = lcs(q_pred_toks, q_true_toks)
+        q_score = q_lcs / (len(q_pred_toks) + len(q_true_toks) - q_lcs)
+        r_lcs = lcs(r_pred_toks, r_true_toks)
+        r_score = r_lcs / (len(r_pred_toks) + len(r_true_toks) - r_lcs)
         score = max(score, q_score + r_score)
     return score
 
