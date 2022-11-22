@@ -26,7 +26,7 @@ def group_ground_truth(df):
     return q_true, r_true
 
 
-def score(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_indexes):
+def eval(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_indexes):
     """Calculate prediction score.
 
     Args:
@@ -73,12 +73,25 @@ def score_one(q_pred, r_pred, q_true: list, r_true: list):
     for j in range(len(q_true)):
         q_true_toks = tokenize(q_true[j])
         r_true_toks = tokenize(r_true[j])
-        q_lcs = lcs(q_pred_toks, q_true_toks)
-        q_score = q_lcs / (len(q_pred_toks) + len(q_true_toks) - q_lcs)
-        r_lcs = lcs(r_pred_toks, r_true_toks)
-        r_score = r_lcs / (len(r_pred_toks) + len(r_true_toks) - r_lcs)
+        q_score = normalize_score(
+            lcs(q_pred_toks, q_true_toks), q_pred_toks, q_true_toks)
+        r_score = normalize_score(
+            lcs(r_pred_toks, r_true_toks), r_pred_toks, r_true_toks)
         score = max(score, q_score + r_score)
     return score
+
+
+def normalize_score(score, text1, text2):
+    """Normalize the score to a number between 0 and 1.
+
+    Args:
+        score (int): the LCS score of text1 and text2
+        text1 (list): list of tokens
+        text2 (list): list of tokens
+    """
+    if len(text1) == 0 or len(text2) == 0:
+        return 0
+    return score / (len(text1) + len(text2) - score)
 
 
 def lcs(text1: list, text2: list) -> int:

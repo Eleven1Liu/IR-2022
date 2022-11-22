@@ -16,7 +16,7 @@ class Ranker():
 class CosSimilarity(Ranker):
     def __init__(self, model_name=None) -> None:
         super().__init__()
-        self.model_name = model_name or 'all-MiniLM-L6-v2'
+        self.model_name = model_name or 'all-MiniLM-L6-v2'  # 'multi-qa-MiniLM-L6-cos-v1'
         self._load_model()
 
     def _load_model(self):
@@ -42,6 +42,7 @@ class CosSimilarity(Ranker):
         for i in tqdm(range(num_instances)):
             qs, qe = q_indexes[i]
             rs, re = r_indexes[i]
+            # dot_sim = util.dot_score(q_embeds[qs:qe], r_embeds[rs:re])
             cos_sim = util.cos_sim(q_embeds[qs:qe], r_embeds[rs:re])
             scores.append(cos_sim)
         return scores
@@ -96,7 +97,7 @@ class NLI(Ranker):
             rs, re = r_indexes[i]
             sent_pairs = [(q, r) for q, r in itertools.product(queries[qs:qe], responses[rs:re])]
             score = self.model.predict(
-                sent_pairs, convert_to_numpy=False, convert_to_tensor=True)
+                sent_pairs, convert_to_numpy=False, convert_to_tensor=True, show_progress_bar=False)
             # labels = [self.label_names[score_max]
             #           for score_max in score.argmax(axis=1)]
             scores.append(score)

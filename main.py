@@ -6,7 +6,7 @@ import yaml
 from libmultilabel.common_utils import AttributeDict, Timer
 
 from data_utils import load_data, sentencize_docs, write_results
-from evaluate import group_ground_truth, score
+from evaluate import group_ground_truth, eval
 from rankers import NLI, CosSimilarity
 
 logging.basicConfig(
@@ -39,7 +39,7 @@ def main():
     scores = ranker.predict(q_all_sents, r_all_sents, q_ind, r_ind)
     selected_indexes = ranker.rank(scores, df_["s"])
 
-    q_outs, r_outs, scores = score(
+    q_outs, r_outs, scores = eval(
         q_all_sents, r_all_sents, q_true, r_true, q_ind, r_ind, selected_indexes)
     write_results(q_outs, r_outs, config.output_path)
 
