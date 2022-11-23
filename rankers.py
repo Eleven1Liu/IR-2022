@@ -1,7 +1,8 @@
 import collections
 import itertools
-import pandas as pd
+import logging
 
+import pandas as pd
 import torch
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
 from tqdm import tqdm
@@ -122,7 +123,7 @@ class NLI(Ranker):
         return selected_indexes
 
 
-class NLIClassifer(Ranker):
+class NLIClassifier(Ranker):
     def __init__(self):
         super().__init__()
 
@@ -135,7 +136,7 @@ class NLIClassifer(Ranker):
         selected_indexes = df.groupby(["id"])["preds"].idxmax()
         return selected_indexes
 
-    def _load_prediction(self, pred_path):
+    def load_prediction(self, pred_path):
         """Load label scores for sentence pairs.
 
         Args:
@@ -153,10 +154,12 @@ class NLIClassifer(Ranker):
             label_scores = [l.split(":") for l in line.split(" ")]
             for label, score in label_scores:
                 scores[label].append(float(score))
+        logging.info("Load %d prediction scores." % (len(lines)))
         return scores
 
-    def _load_test_data(self, test_path):
+    def load_test_data(self, test_path):
         """Load test data with columns `id`, `s`, and `text` (sentence pairs split by [SEP])."""
         df_test = pd.read_csv(test_path, sep="\t", header=None)
         df_test.columns = ["id", "s", "text"]
+        logging.info("Load %d test instances." %(len(df_test)))
         return df_test
