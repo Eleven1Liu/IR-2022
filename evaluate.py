@@ -51,7 +51,7 @@ def eval(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_inde
 
 
 def eval_sentence_pairs(sentence_pairs, q_true, r_true):
-    """Calculate prediction score for NLIClassfier.
+    """Calculate prediction score for NLIClassifier.
 
     Args:
         sentence_pairs (list): list of predicted q and r split by [SEP].
