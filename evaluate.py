@@ -1,14 +1,4 @@
 import logging
-import nltk
-nltk.download('punkt')
-
-PUNCTUATIONS = set([c for c in """!"#$%&'()*+, -./:;<=>?@[\]^_`{|}~"""])
-
-
-def tokenize(text):
-    """Tokenize text and remove punctuations."""
-    tokens = nltk.word_tokenize(text)
-    return [c for c in tokens if c not in PUNCTUATIONS]
 
 
 def group_ground_truth(df):
@@ -33,7 +23,7 @@ def eval(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_inde
         queries (list): list of query sentences
         responses (list): list of responses sentences
         q_true (list): list of ground truth queries
-        r_true (list): list of ground truth qresponses
+        r_true (list): list of ground truth responses
         q_indexes (list): the `queries` offsets for each training instance
         r_indexes (list): the `responses` offsets for each training instance
         selected_indexes (List[tuple]): List of the most related/unrelated indexes
