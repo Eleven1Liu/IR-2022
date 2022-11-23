@@ -1,4 +1,6 @@
+import collections
 import itertools
+import pandas as pd
 
 import torch
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
@@ -118,3 +120,43 @@ class NLI(Ranker):
             x = torch.argmax(s).item()
             selected_indexes.append(x)
         return selected_indexes
+
+
+class NLIClassifer(Ranker):
+    def __init__(self):
+        super().__init__()
+
+    def predict(self):
+        pass
+
+    def rank(self, df, scores):
+        # Select label scores based on given "s" (AGREE/DISAGREE)
+        df["preds"] = [scores[df["s"][i]][i] for i in range(len(df))]
+        selected_indexes = df.groupby(["id"])["preds"].idxmax()
+        return selected_indexes
+
+    def _load_prediction(self, pred_path):
+        """Load label scores for sentence pairs.
+
+        Args:
+            pred_path (str): path to the prediction in
+                "label1:score1 label2:score2" format.
+
+        Returns:
+            dict: `AGREE` and `DISAGREE` scores for query-response pairs.
+        """
+        with open(pred_path, "r") as f:
+            lines = f.read().splitlines()
+
+        scores = collections.defaultdict(list)
+        for line in lines:
+            label_scores = [l.split(":") for l in line.split(" ")]
+            for label, score in label_scores:
+                scores[label].append(float(score))
+        return scores
+
+    def _load_test_data(self, test_path):
+        """Load test data with columns `id`, `s`, and `text` (sentence pairs split by [SEP])."""
+        df_test = pd.read_csv(test_path, sep="\t", header=None)
+        df_test.columns = ["id", "s", "text"]
+        return df_test

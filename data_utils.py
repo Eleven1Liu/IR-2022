@@ -1,18 +1,13 @@
-import nltk
 import itertools
 import logging
 
 import pandas as pd
 from spacy.lang.en import English
 
-from evaluate import normalize_score, lcs
-
+from evaluate import lcs, normalize_score, tokenize
 
 nlp = English()
 sentencizer = nlp.add_pipe("sentencizer")
-nltk.download('punkt')
-
-PUNCTUATIONS = set([c for c in """!"#$%&'()*+, -./:;<=>?@[\]^_`{|}~"""])
 
 
 def load_data(path, text_cols=None):
@@ -58,7 +53,6 @@ def sample_nli_datasets(df, quieres, responses, q_true, r_true, q_indexes, r_ind
         selected_q = select_sentences(quieres[qs:qe], q_true[i], threshold)
         rs, re = r_indexes[i]
         selected_r = select_sentences(responses[rs:re], r_true[i], threshold)
-
         for q, r in itertools.product(selected_q, selected_r):
             data["id"].append(df["id"][i])
             data["label"].append(df["s"][i])
@@ -69,6 +63,19 @@ def sample_nli_datasets(df, quieres, responses, q_true, r_true, q_indexes, r_ind
     df_train = df_all[~df_all["id"].isin(test_ids)]
     df_test = df_all[df_all["id"].isin(test_ids)]
     return df_train, df_test
+
+
+def convert_nli_test(df, quieres, responses, q_indexes, r_indexes):
+    data = {k: [] for k in ["id", "label", "text"]}
+    for i in range(len(df)):
+        qs, qe = q_indexes[i]
+        rs, re = r_indexes[i]
+        for q, r in itertools.product(quieres[qs:qe], responses[rs:re]):
+            data["id"].append(df["id"][i])
+            data["label"].append(df["s"][i])
+            data["text"].append(f"{q} [SEP] {r}")  # hard-code SEP ..
+
+    return pd.DataFrame(data)
 
 
 def select_sentences(sents, true_sents, threshold=0.5):
@@ -111,12 +118,6 @@ def sentencize_docs(docs):
         index.append((s, s+len(sents)))
         s += len(sents)
     return index, all_sents
-
-
-def tokenize(text):
-    """Tokenize text and remove punctuations."""
-    tokens = nltk.word_tokenize(text)
-    return [c for c in tokens if c not in PUNCTUATIONS]
 
 
 def write_dataset(df, path):

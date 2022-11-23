@@ -1,5 +1,10 @@
 import logging
 
+import nltk
+
+nltk.download("punkt")
+PUNCTUATIONS = set([c for c in """!"#$%&'()*+, -./:;<=>?@[\]^_`{|}~"""])
+
 
 def group_ground_truth(df):
     """Group ground truth by id.
@@ -17,7 +22,7 @@ def group_ground_truth(df):
 
 
 def eval(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_indexes):
-    """Calculate prediction score.
+    """Calculate prediction score for CosSimilarity and NLI.
 
     Args:
         queries (list): list of query sentences
@@ -35,6 +40,28 @@ def eval(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_inde
         # start + offset
         q_pred = queries[q_indexes[i][0] + selected_indexes[i] // col_num]
         r_pred = responses[r_indexes[i][0] + selected_indexes[i] % col_num]
+        s = score_one(q_pred, r_pred, q_true[i], r_true[i])
+        q_outs.append(q_pred)
+        r_outs.append(r_pred)
+        scores.append(s)
+
+    final_score = sum(scores) / (2*N)
+    logging.info(f"Score: {final_score}")
+    return q_outs, r_outs, scores
+
+
+def eval_sentence_pairs(sentence_pairs, q_true, r_true):
+    """Calculate prediction score for NLIClassfier.
+
+    Args:
+        sentence_pairs (list): list of predicted q and r split by [SEP].
+        q_true (list): list of ground truth queries
+        r_true (list): list of ground truth responses
+    """
+    q_outs, r_outs, scores = list(), list(), list()
+    N = len(q_true)
+    for i, text in enumerate(sentence_pairs):
+        q_pred, r_pred = [t.strip() for t in text.split("[SEP]")]
         s = score_one(q_pred, r_pred, q_true[i], r_true[i])
         q_outs.append(q_pred)
         r_outs.append(r_pred)
@@ -104,3 +131,9 @@ def lcs(text1: list, text2: list) -> int:
             else:
                 lcs[i % 2][j] = max(lcs[(i-1) % 2][j], lcs[i % 2][j-1])
     return lcs[len(text1) % 2][len(text2)]
+
+
+def tokenize(text):
+    """Tokenize text and remove punctuations. (for scoring)"""
+    tokens = nltk.word_tokenize(text)
+    return [c for c in tokens if c not in PUNCTUATIONS]
