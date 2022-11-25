@@ -21,29 +21,31 @@ def group_ground_truth(df):
     return q_true, r_true
 
 
-def eval(queries, responses, q_true, r_true, q_indexes, r_indexes, selected_indexes):
+def eval(queries, responses, q_indexes, r_indexes, selected_indexes, q_true=None, r_true=None):
     """Calculate prediction score for CosSimilarity and NLI.
 
     Args:
         queries (list): list of query sentences
         responses (list): list of responses sentences
-        q_true (list): list of ground truth queries
-        r_true (list): list of ground truth responses
         q_indexes (list): the `queries` offsets for each training instance
         r_indexes (list): the `responses` offsets for each training instance
         selected_indexes (List[tuple]): List of the most related/unrelated indexes
+        q_true (list): list of ground truth queries, defaults to None
+        r_true (list): list of ground truth responses, defaults to None
     """
     q_outs, r_outs, scores = list(), list(), list()
-    N = len(q_true)
+    N = len(q_indexes)
     for i in range(N):
         col_num = r_indexes[i][1]-r_indexes[i][0]
         # start + offset
         q_pred = queries[q_indexes[i][0] + selected_indexes[i] // col_num]
         r_pred = responses[r_indexes[i][0] + selected_indexes[i] % col_num]
-        s = score_one(q_pred, r_pred, q_true[i], r_true[i])
         q_outs.append(q_pred)
         r_outs.append(r_pred)
-        scores.append(s)
+
+        if q_true is not None and r_true is not None:
+            s = score_one(q_pred, r_pred, q_true[i], r_true[i])
+            scores.append(s)
 
     final_score = sum(scores) / (2*N)
     logging.info(f"Score: {final_score}")

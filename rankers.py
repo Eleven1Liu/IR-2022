@@ -117,7 +117,6 @@ class NLI(Ranker):
                 s = score[:, 1] if entail_max > neural_max else score[:, 2]
             else:
                 s = score[:, 0]
-
             x = torch.argmax(s).item()
             selected_indexes.append(x)
         return selected_indexes

@@ -16,16 +16,21 @@ logging.basicConfig(
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config", default="config/baseline.yml")
+    parser.add_argument('--test', action='store_true')
     args, _ = parser.parse_known_args()
 
     with open(args.config) as fp:
         config = yaml.load(fp, Loader=yaml.SafeLoader)
     config = AttributeDict(config)
 
-    # TODO simulate when there's only testing data for all rankers
-    # load training data
-    df = load_data(config.train_path)
-    q_true, r_true = group_ground_truth(df)
+    if not args.test:
+        # training with ground truth
+        df = load_data(config.train_path)
+        q_true, r_true = group_ground_truth(df)
+    else:
+        df = load_data(config.test_path, text_cols=["q", "r"])
+        q_true, r_true = None, None # hard code for now
+
     df_ = df.drop_duplicates(subset=["id"], keep="first").reset_index()
     logging.info(f"Load {len(df_)} input samples.")
 
@@ -49,8 +54,8 @@ def main():
         scores = ranker.predict(query_sents, respo_sents, q_ind, r_ind)
         selected_indexes = ranker.rank(scores, df_["s"])
         q_outs, r_outs, scores = eval(
-            query_sents, respo_sents, q_true, r_true, q_ind, r_ind, selected_indexes)
-    write_results(q_outs, r_outs, config.output_path)
+            query_sents, respo_sents, q_ind, r_ind, selected_indexes, q_true, r_true)
+    write_results(list(df_["id"]), q_outs, r_outs, config.output_path)
 
 
 if __name__ == '__main__':

@@ -126,19 +126,29 @@ def write_dataset(df, path):
     logging.info("Write %d instances to %s." %(len(df), path))
 
 
-def write_results(queries, responses, output_path):
+def write_results(ids, queries, responses, output_path):
     """Output `q'` and `r'`.
 
     Args:
+        ids (list): list of `id`
         queries (list): list of predicted `q'`
         responses (list): list of predicted `r'`
         output_path (str): output path
     """
     assert len(queries) == len(responses)
-    df = pd.DataFrame({
-        "q'": queries,
-        "r'": responses
-    })
-    df.to_csv(output_path, index=False)
+    queries = [postprocess(q) for q in queries]
+    responses = [postprocess(r) for r in responses]
+    with open(output_path, 'w') as f:
+        f.write("id,q,r\n")
+        for i in range(len(queries)):
+            out_str = f"{ids[i]},{queries[i]},{responses[i]}"
+            f.write(out_str)
+            f.write("\n")
     logging.info("Write the %d results to %s." %
                  (len(queries), output_path))
+
+
+def postprocess(text):
+    """Postprocess text to TBrain format."""
+    text = text.replace('"', '\"')
+    return f'"{text}"'
