@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
 from tqdm import tqdm
+from transformers import BartForConditionalGeneration, BartTokenizer
 
 
 class Ranker():
@@ -121,6 +122,9 @@ class NLI(Ranker):
             selected_indexes.append(x)
         return selected_indexes
 
+    # def rank_topk(self, scores, states):
+    # TBD
+
 
 class NLIClassifier(Ranker):
     def __init__(self):
@@ -162,3 +166,36 @@ class NLIClassifier(Ranker):
         df_test.columns = ["id", "s", "text"]
         logging.info("Load %d test instances." %(len(df_test)))
         return df_test
+
+
+class BART:
+    def __init__(self):
+        super().__init__()
+        self.encoder_name = 'facebook/bart-large-cnn'
+        self._load_model()
+
+    def _load_model(self):
+        self.tokenizer = BartTokenizer.from_pretrained(self.encoder_name)
+        self.model = BartForConditionalGeneration.from_pretrained(self.encoder_name)
+
+    def predict(self, queries, responses, q_indexes, r_indexes):
+        num_instances = len(q_indexes)
+        q_outs, r_outs = list(), list()
+        for i in tqdm(range(num_instances)):
+            qs, qe = q_indexes[i]
+            rs, re = r_indexes[i]
+            q_outs.append(self.summarize(queries[qs:qe]))
+            r_outs.append(self.summarize(responses[rs:re]))
+        return q_outs, r_outs
+
+    def summarize(self, sentences, limit=20):
+        document = (" ".join(sentences[:limit]))
+        inputs = self.tokenizer([document],
+                        max_length=1024, return_tensors="pt")
+
+        # Generate Summary
+        summary_ids = self.model.generate(
+            inputs["input_ids"], num_beams=2, min_length=0, max_length=20)
+
+        return self.tokenizer.batch_decode(
+            summary_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]

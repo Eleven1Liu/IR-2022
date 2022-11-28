@@ -74,6 +74,17 @@ def eval_sentence_pairs(sentence_pairs, q_true, r_true):
     return q_outs, r_outs, scores
 
 
+def eval_bart(q_outs, r_outs, q_true, r_true):
+    scores = list()
+    N = len(q_outs)
+    for i in range(N):
+        s = score_one(q_outs[i], r_outs[i], q_true[i], r_true[i])
+        scores.append(s)
+    final_score = sum(scores) / (2*N)
+    logging.info(f"Score: {final_score}")
+    return scores
+
+
 def score_one(q_pred, r_pred, q_true: list, r_true: list):
     """Calculate the max LCS score of `j` possible answers.
 
