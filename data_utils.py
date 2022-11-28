@@ -1,6 +1,8 @@
 import itertools
 import logging
+import re
 
+import nltk
 import pandas as pd
 from spacy.lang.en import English
 
@@ -8,6 +10,8 @@ from evaluate import lcs, normalize_score, tokenize
 
 nlp = English()
 sentencizer = nlp.add_pipe("sentencizer")
+nltk.download("punkt")
+PUNCTUATIONS = set([c for c in """!"#$%&'()*+, -./:;<=>?@[\]^_`{|}~"""])
 
 
 def load_data(path, text_cols=None):
@@ -31,6 +35,21 @@ def load_data(path, text_cols=None):
 def preprocess(text):
     """Remove " from the begin and end."""
     return text.strip()[1:-1]
+
+
+def remove_urls(text):
+    """Remove urls from raw text."""
+    try:
+        text = re.sub("http[s]?\s*:\s*//", "http://", text)
+        regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+        urls = re.findall(regex, text)
+        for match in [x[0] for x in urls]:
+            text = text.replace(match, '')
+            text = re.sub("\s\s+", " ", text)
+    except:
+        pass
+        # print(f"ERROR: {text}")
+    return text
 
 
 def sample_nli_datasets(df, quieres, responses, q_true, r_true, q_indexes, r_indexes, threshold=0.5, train_test_split=0.2):
@@ -107,17 +126,35 @@ def sentencize(text):
     return [sent.text for sent in doc.sents]
 
 
-def sentencize_docs(docs):
+def sentencize_docs(docs, min_len=1):
     """SBD for the collection"""
     # ind: map sentences to the original documents
     index, all_sents = list(), list()
     s = 0
     for d in docs:
         sents = sentencize(d)
-        all_sents += sents
-        index.append((s, s+len(sents)))
-        s += len(sents)
+        filtered_sents = filter_short_sentences(sents, min_len)
+        if len(filtered_sents) == 0:
+            # noqa: put an empty sentence and make a guess
+            filtered_sents.append("")
+        all_sents += filtered_sents
+        index.append((s, s+len(filtered_sents)))
+        s += len(filtered_sents)
     return index, all_sents
+
+
+def filter_short_sentences(sents, min_len=1):
+    """filter short sentences such as:
+    - 1.
+    """
+    filtered_sents = list()
+    for s in sents:
+        # s = re.sub(r'[0-9]+', '', s)
+        tokens = nltk.word_tokenize(s)
+        tokens = [c for c in tokens if c not in PUNCTUATIONS]
+        if len(" ".join(tokens)) >= min_len:
+            filtered_sents.append(s)
+    return filtered_sents
 
 
 def write_dataset(df, path):

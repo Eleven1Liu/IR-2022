@@ -5,7 +5,7 @@ import sys
 import yaml
 from libmultilabel.common_utils import AttributeDict, Timer
 
-from data_utils import convert_nli_test, load_data, sample_nli_datasets, sentencize_docs, write_dataset, write_results
+from data_utils import convert_nli_test, load_data, remove_urls, sample_nli_datasets, sentencize_docs, write_dataset, write_results
 from evaluate import group_ground_truth, eval, eval_sentence_pairs
 from rankers import NLI, CosSimilarity, NLIClassifier
 
@@ -26,6 +26,8 @@ def main():
     if not args.test:
         # training with ground truth
         df = load_data(config.train_path)
+        df["q"] = df["q"].apply(remove_urls)
+        df["r"] = df["r"].apply(remove_urls)
         q_true, r_true = group_ground_truth(df)
     else:
         df = load_data(config.test_path, text_cols=["q", "r"])
