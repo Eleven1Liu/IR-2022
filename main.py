@@ -43,7 +43,7 @@ def main():
         f"Load {len(query_sents)} query(q) sentences and {len(respo_sents)} response(r) sentences.")
 
     # Rankers
-    ranker = getattr(sys.modules[__name__], config.ranker)()
+    ranker = getattr(sys.modules[__name__], config.ranker)(**config)
     if config.ranker == "NLIClassifier":
         df_test = ranker.load_test_data(config.test_path)
         scores = ranker.load_prediction(config.predict_path)

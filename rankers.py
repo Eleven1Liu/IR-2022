@@ -2,6 +2,7 @@ import collections
 import itertools
 import logging
 
+import numpy as np
 import pandas as pd
 import torch
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
@@ -18,7 +19,7 @@ class Ranker():
 
 
 class CosSimilarity(Ranker):
-    def __init__(self, model_name=None) -> None:
+    def __init__(self, model_name=None, **kwargs) -> None:
         super().__init__()
         self.model_name = model_name or 'all-MiniLM-L6-v2'  # 'multi-qa-MiniLM-L6-cos-v1'
         self._load_model()
@@ -72,7 +73,7 @@ class CosSimilarity(Ranker):
 
 
 class NLI(Ranker):
-    def __init__(self, encoder_name=None) -> None:
+    def __init__(self, encoder_name=None, **kwargs) -> None:
         super().__init__()
         self.encoder_name = encoder_name or 'cross-encoder/nli-deberta-v3-base'
         self.label_names = ['contradiction', 'entailment', 'neutral']
@@ -127,7 +128,7 @@ class NLI(Ranker):
 
 
 class NLIClassifier(Ranker):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
 
     def predict(self):
@@ -169,36 +170,60 @@ class NLIClassifier(Ranker):
 
 
 class BART:
-    def __init__(self):
+    def __init__(self, sentence_limit=20, summary_max_length=50, rerank_threshold=0.5, **kwargs):
         super().__init__()
-        self.encoder_name = 'facebook/bart-large-cnn'
+        self.encoder_name = 'facebook/bart-large-cnn'  # sshleifer/distilbart-cnn-12-6
+        self.cross_encoder_name = 'cross-encoder/stsb-distilroberta-base'
+        self.sentence_limit = sentence_limit # sentence num for summarization after SBD
+        self.summary_max_length = summary_max_length
+        self.rerank_threshold = rerank_threshold
+
+        self._init_device()
+        self._load_model()
+
+    def _init_device(self):
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         print(f"Using {self.device}")
-        self._load_model()
 
     def _load_model(self):
         self.tokenizer = BartTokenizer.from_pretrained(self.encoder_name)
-        self.model = BartForConditionalGeneration.from_pretrained(self.encoder_name)
-        self.model = self.model.to(self.device)
+        self.model = BartForConditionalGeneration.from_pretrained(
+            self.encoder_name).to(self.device)
+        self.cross_model = CrossEncoder(self.cross_encoder_name)
 
-    def predict(self, queries, responses, q_indexes, r_indexes):
+    def predict(self, queries, responses, q_indexes, r_indexes, rerank_sentences=True):
         num_instances = len(q_indexes)
         q_outs, r_outs = list(), list()
         for i in tqdm(range(num_instances)):
             qs, qe = q_indexes[i]
             rs, re = r_indexes[i]
-            q_outs.append(self.summarize(queries[qs:qe]))
-            r_outs.append(self.summarize(responses[rs:re]))
+            q_preds = self.summarize(queries[qs:qe])
+            r_preds = self.summarize(responses[rs:re])
+
+            if rerank_sentences:
+                q_preds = self.rerank_sentences(q_preds, queries[qs:qe])
+                r_preds = self.rerank_sentences(r_preds, responses[rs:re])
+            q_outs.append(q_preds)
+            r_outs.append(r_preds)
         return q_outs, r_outs
 
-    def summarize(self, sentences, limit=20):
-        document = (" ".join(sentences[:limit]))
+    def summarize(self, sentences):
+        document = (" ".join(sentences[:self.sentence_limit]))
         inputs = self.tokenizer([document],
                                 max_length=1024, return_tensors="pt").to(self.device)
 
         # Generate Summary
         summary_ids = self.model.generate(
-            inputs["input_ids"], num_beams=2, min_length=0, max_length=50)
+            inputs["input_ids"], num_beams=2,
+            min_length=0, max_length=self.summary_max_length)
 
         return self.tokenizer.batch_decode(
             summary_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+
+    def rerank_sentences(self, summary, sentences):
+        # sentence 1 = summary of passage, sentence 2s = sentences in the passage
+        sentence_combinations = [[summary, sent] for sent in sentences]
+        similarity_scores = self.cross_model.predict(
+            sentence_combinations, show_progress_bar=False)
+        indexes = np.where(similarity_scores > self.rerank_threshold)[0]
+        return " ".join([sentences[ind] for ind in indexes])
