@@ -172,11 +172,14 @@ class BART:
     def __init__(self):
         super().__init__()
         self.encoder_name = 'facebook/bart-large-cnn'
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        print(f"Using {self.device}")
         self._load_model()
 
     def _load_model(self):
         self.tokenizer = BartTokenizer.from_pretrained(self.encoder_name)
         self.model = BartForConditionalGeneration.from_pretrained(self.encoder_name)
+        self.model = self.model.to(self.device)
 
     def predict(self, queries, responses, q_indexes, r_indexes):
         num_instances = len(q_indexes)
@@ -191,11 +194,11 @@ class BART:
     def summarize(self, sentences, limit=20):
         document = (" ".join(sentences[:limit]))
         inputs = self.tokenizer([document],
-                        max_length=1024, return_tensors="pt")
+                                max_length=1024, return_tensors="pt").to(self.device)
 
         # Generate Summary
         summary_ids = self.model.generate(
-            inputs["input_ids"], num_beams=2, min_length=0, max_length=20)
+            inputs["input_ids"], num_beams=2, min_length=0, max_length=50)
 
         return self.tokenizer.batch_decode(
             summary_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
