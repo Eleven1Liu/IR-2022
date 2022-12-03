@@ -60,7 +60,9 @@ def main():
         selected_indexes = ranker.rank(scores, df_["s"])
         q_outs, r_outs, scores = eval(
             query_sents, respo_sents, q_ind, r_ind, selected_indexes, q_true, r_true)
-    write_results(list(df_["id"]), q_outs, r_outs, config.output_path)
+
+    write_results(list(df_["id"]), q_outs, r_outs,
+                  config.output_path, df_format=not args.test)
 
 
 if __name__ == '__main__':

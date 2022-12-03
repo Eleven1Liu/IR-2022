@@ -163,7 +163,7 @@ def write_dataset(df, path):
     logging.info("Write %d instances to %s." %(len(df), path))
 
 
-def write_results(ids, queries, responses, output_path):
+def write_results(ids, queries, responses, output_path, df_format=False):
     """Output `q'` and `r'`.
 
     Args:
@@ -175,12 +175,22 @@ def write_results(ids, queries, responses, output_path):
     assert len(queries) == len(responses)
     queries = [postprocess(q) for q in queries]
     responses = [postprocess(r) for r in responses]
-    with open(output_path, 'w') as f:
-        f.write("id,q,r\n")
-        for i in range(len(queries)):
-            out_str = f"{ids[i]},{queries[i]},{responses[i]}"
-            f.write(out_str)
-            f.write("\n")
+
+    if df_format:
+        data = {
+            "id": ids,
+            "q": queries,
+            "r": responses
+        }
+        df = pd.DataFrame(data)
+        write_dataset(df, output_path)
+    else:
+        with open(output_path, 'w') as f:
+            f.write("id,q,r\n")
+            for i in range(len(queries)):
+                out_str = f"{ids[i]},{queries[i]},{responses[i]}"
+                f.write(out_str)
+                f.write("\n")
     logging.info("Write the %d results to %s." %
                  (len(queries), output_path))
 
