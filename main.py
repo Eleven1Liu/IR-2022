@@ -5,7 +5,7 @@ import sys
 import yaml
 from libmultilabel.common_utils import AttributeDict, Timer
 
-from data_utils import load_data, remove_urls, sentencize_docs, write_results
+from data_utils import load_data, remove_urls, remove_multiple_punctuations, sentencize_docs, write_results
 from evaluation import group_ground_truth, eval, eval_bart, eval_sentence_pairs
 from rankers import BART, NLI, CosSimilarity, NLIClassifier
 
@@ -26,8 +26,10 @@ def main():
     if not args.test:
         # training with ground truth
         df = load_data(config.train_path)
-        df["q"] = df["q"].apply(remove_urls)
-        df["r"] = df["r"].apply(remove_urls)
+        # df["q"] = df["q"].apply(remove_urls)
+        # df["r"] = df["r"].apply(remove_urls)
+        # df["q"] = df["q"].apply(remove_multiple_punctuations)
+        # df["r"] = df["r"].apply(remove_multiple_punctuations)
         q_true, r_true = group_ground_truth(df)
     else:
         df = load_data(config.test_path, text_cols=["q", "r"])
@@ -37,8 +39,9 @@ def main():
     logging.info(f"Load {len(df_)} input samples.")
 
     # sbd
-    q_ind, query_sents = sentencize_docs(df_["q"])
-    r_ind, respo_sents = sentencize_docs(df_["r"])
+    config.comma_split = config.get('comma_split', False)
+    q_ind, query_sents = sentencize_docs(df_["q"], comma_split=config.comma_split)
+    r_ind, respo_sents = sentencize_docs(df_["r"], comma_split=config.comma_split)
     logging.info(
         f"Load {len(query_sents)} query(q) sentences and {len(respo_sents)} response(r) sentences.")
 

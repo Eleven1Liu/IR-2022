@@ -52,6 +52,11 @@ def remove_urls(text):
     return text
 
 
+def remove_multiple_punctuations(text):
+    """Replace ... to . for better SBD result"""
+    return re.sub(r"[.]+", ".", text)
+
+
 def sample_nli_datasets(df, quieres, responses, q_true, r_true, q_indexes, r_indexes, threshold=0.5, train_test_split=0.2):
     """Sample data from NLI training.
 
@@ -69,9 +74,10 @@ def sample_nli_datasets(df, quieres, responses, q_true, r_true, q_indexes, r_ind
     data = { k: [] for k in ["id", "label", "text"] }
     for i in range(len(df)):
         qs, qe = q_indexes[i]
-        selected_q = select_sentences(quieres[qs:qe], q_true[i], threshold)
+        selected_q = select_sentences(quieres[qs:qe], q_true[i], threshold) # comma_split
         rs, re = r_indexes[i]
-        selected_r = select_sentences(responses[rs:re], r_true[i], threshold)
+        selected_r = select_sentences(
+            responses[rs:re], r_true[i], threshold)  # comma_split
         for q, r in itertools.product(selected_q, selected_r):
             data["id"].append(df["id"][i])
             data["label"].append(df["s"][i])
@@ -97,7 +103,7 @@ def convert_nli_test(df, quieres, responses, q_indexes, r_indexes):
     return pd.DataFrame(data)
 
 
-def select_sentences(sents, true_sents, threshold=0.5):
+def select_sentences(sents, true_sents, threshold=0.5, comma_split=False):
     """Select sentences for training the NLI model.
 
     Args:
@@ -112,7 +118,8 @@ def select_sentences(sents, true_sents, threshold=0.5):
     for s in sents:
         toks = tokenize(s)
         for true_s in true_sents:
-            _, true_all_sents = sentencize_docs([true_s])
+            _, true_all_sents = sentencize_docs(
+                [true_s], comma_split=comma_split)
             for s_ in true_all_sents:
                 true_toks = tokenize(s_)
                 score = normalize_score(lcs(toks, true_toks), toks, true_toks)
@@ -121,18 +128,24 @@ def select_sentences(sents, true_sents, threshold=0.5):
     return set(selected_sents)
 
 
-def sentencize(text):
+def sentencize(text, comma_split=False):
     doc = nlp(text)
-    return [sent.text for sent in doc.sents]
+    sentences = list()
+    for sent in doc.sents:
+        if comma_split:
+            sentences.extend([s.strip() for s in sent.text.split(",")])
+        else:
+            sentences.append(sent.text)
+    return sentences
 
 
-def sentencize_docs(docs, min_len=1):
+def sentencize_docs(docs, min_len=1, comma_split=False):
     """SBD for the collection"""
     # ind: map sentences to the original documents
     index, all_sents = list(), list()
     s = 0
     for d in docs:
-        sents = sentencize(d)
+        sents = sentencize(d, comma_split)
         filtered_sents = filter_short_sentences(sents, min_len)
         if len(filtered_sents) == 0:
             # noqa: put an empty sentence and make a guess
