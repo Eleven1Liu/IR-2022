@@ -14,9 +14,8 @@ class Ranker():
     def __init__(self) -> None:
         pass
 
-    def evaluate():
+    def predict():
         pass
-
 
 class CosSimilarity(Ranker):
     def __init__(self, model_name=None, **kwargs) -> None:

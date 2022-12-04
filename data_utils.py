@@ -6,7 +6,7 @@ import nltk
 import pandas as pd
 from spacy.lang.en import English
 
-from evaluate import lcs, normalize_score, tokenize
+from evaluation import lcs, normalize_score, tokenize
 
 nlp = English()
 sentencizer = nlp.add_pipe("sentencizer")

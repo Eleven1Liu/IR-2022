@@ -5,8 +5,8 @@ import sys
 import yaml
 from libmultilabel.common_utils import AttributeDict, Timer
 
-from data_utils import convert_nli_test, load_data, remove_urls, sample_nli_datasets, sentencize_docs, write_dataset, write_results
-from evaluate import group_ground_truth, eval, eval_bart, eval_sentence_pairs
+from data_utils import load_data, remove_urls, sentencize_docs, write_results
+from evaluation import group_ground_truth, eval, eval_bart, eval_sentence_pairs
 from rankers import BART, NLI, CosSimilarity, NLIClassifier
 
 logging.basicConfig(
@@ -54,7 +54,8 @@ def main():
             sentence_pairs, q_true, r_true)
     elif config.ranker == "BART":
         q_outs, r_outs = ranker.predict(query_sents, respo_sents, q_ind, r_ind)
-        scores = eval_bart(q_outs, r_outs, q_true, r_true)
+        if not args.test:
+            scores = eval_bart(q_outs, r_outs, q_true, r_true)
     else:
         scores = ranker.predict(query_sents, respo_sents, q_ind, r_ind)
         selected_indexes = ranker.rank(scores, df_["s"])
