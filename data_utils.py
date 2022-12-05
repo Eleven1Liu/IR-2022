@@ -1,4 +1,5 @@
 import itertools
+import json
 import logging
 import re
 
@@ -176,6 +177,21 @@ def write_dataset(df, path):
     logging.info("Write %d instances to %s." %(len(df), path))
 
 
+def write_qgen_corpus(indexes, passages, output_path):
+    """Convert and write passages (i.e., `q` and `r`) to `beir.generation.QueryGenerator` format."""
+    corpus = [{
+        "_id": str(indexes[i]),
+        "title": "",
+        "text": passages[i]
+    } for i in range(len(indexes))]
+
+    with open(output_path, "w") as f:
+        for sample in corpus:
+            json.dump(sample, f)
+            f.write("\n")
+    logging.info("Write %d samples to %s" % (len(corpus), output_path))
+
+
 def write_results(ids, queries, responses, output_path, df_format=False):
     """Output `q'` and `r'`.
 
@@ -198,7 +214,7 @@ def write_results(ids, queries, responses, output_path, df_format=False):
         df = pd.DataFrame(data)
         write_dataset(df, output_path)
     else:
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             f.write("id,q,r\n")
             for i in range(len(queries)):
                 out_str = f"{ids[i]},{queries[i]},{responses[i]}"

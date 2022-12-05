@@ -257,6 +257,8 @@ class GPL:
         self.gpl_checkpoint_path = gpl_checkpoint_path
         self._load_model()
 
+        os.makedirs(self.qgen_dir, exist_ok=True)
+
     def _load_model(self):
         self.generator = QueryGenerator(model=QGenModel(self.qgen_model_name))
         # Dense Retrieval Exact Search
