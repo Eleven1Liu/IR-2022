@@ -74,7 +74,7 @@ def eval_sentence_pairs(sentence_pairs, q_true, r_true):
     return q_outs, r_outs, scores
 
 
-def eval_bart(q_outs, r_outs, q_true, r_true):
+def eval_text(q_outs, r_outs, q_true, r_true):
     scores = list()
     N = len(q_outs)
     for i in range(N):

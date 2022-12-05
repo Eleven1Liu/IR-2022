@@ -6,8 +6,8 @@ import yaml
 from libmultilabel.common_utils import AttributeDict, Timer
 
 from data_utils import load_data, remove_urls, remove_multiple_punctuations, sentencize_docs, write_results
-from evaluation import group_ground_truth, eval, eval_bart, eval_sentence_pairs
-from rankers import BART, NLI, CosSimilarity, NLIClassifier
+from evaluation import group_ground_truth, eval, eval_text, eval_sentence_pairs
+from rankers import BART, GPL, NLI, CosSimilarity, NLIClassifier
 
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
@@ -16,7 +16,7 @@ logging.basicConfig(
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config", default="config/baseline.yml")
-    parser.add_argument('--test', action='store_true')
+    parser.add_argument("--test", action="store_true")
     args, _ = parser.parse_known_args()
 
     with open(args.config) as fp:
@@ -39,7 +39,7 @@ def main():
     logging.info(f"Load {len(df_)} input samples.")
 
     # sbd
-    config.comma_split = config.get('comma_split', False)
+    config.comma_split = config.get("comma_split", False)
     q_ind, query_sents = sentencize_docs(df_["q"], comma_split=config.comma_split)
     r_ind, respo_sents = sentencize_docs(df_["r"], comma_split=config.comma_split)
     logging.info(
@@ -58,7 +58,14 @@ def main():
     elif config.ranker == "BART":
         q_outs, r_outs = ranker.predict(query_sents, respo_sents, q_ind, r_ind)
         if not args.test:
-            scores = eval_bart(q_outs, r_outs, q_true, r_true)
+            scores = eval_text(q_outs, r_outs, q_true, r_true)
+    elif config.ranker == "GPL":
+        q_outs, r_outs = ranker.predict(
+            queries=query_sents, responses=respo_sents,
+            q_indexes=q_ind, r_indexes=r_ind,
+            indexes=df_["id"])
+        if not args.test:
+            scores = eval_text(q_outs, r_outs, q_true, r_true)
     else:
         scores = ranker.predict(query_sents, respo_sents, q_ind, r_ind)
         selected_indexes = ranker.rank(scores, df_["s"])
