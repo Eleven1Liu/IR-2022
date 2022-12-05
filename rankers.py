@@ -324,7 +324,7 @@ class GPL:
         Args:
             prefix (str): `q` or `r`.
         """
-        path = os.path.join(self.qgen_dir, f"{prefix}gen-queries.jsonl")
+        path = os.path.join(self.qgen_dir, f"{prefix}qgen-queries.jsonl")
         if not os.path.exists(path):
             self.generate_questions(passages, indexes, prefix)
 
@@ -339,7 +339,7 @@ class GPL:
         df = pd.DataFrame(data)
 
         # the mapping of question id & corpus id
-        qrels_path = os.path.join(self.qgen_dir, f"{prefix}gen-qrels/train.tsv")
+        qrels_path = os.path.join(self.qgen_dir, f"{prefix}qgen-qrels/train.tsv")
         df_rel = pd.read_csv(qrels_path, sep="\t")
         df_merged = df_rel.merge(df, on=["query-id"])
         return df_merged
@@ -347,8 +347,14 @@ class GPL:
     def predict(self, queries, responses, q_indexes, r_indexes, indexes):
         num_instances = len(q_indexes)
         q_outs, r_outs = list(), list()
-        df_q = self.load_questions(queries, indexes, "q")
-        df_r = self.load_questions(responses, indexes, "r")
+
+        # hard code: merge queries to passages for qgen
+        q_passages = [" ".join(queries[q_indexes[i][0]:q_indexes[i][1]])
+                      for i in range(num_instances)]
+        r_passages = [" ".join(responses[r_indexes[i][0]:r_indexes[i][1]])
+                      for i in range(num_instances)]
+        df_q = self.load_questions(q_passages, indexes, "q")
+        df_r = self.load_questions(r_passages, indexes, "r")
 
         for i in tqdm(range(num_instances)):
             qs, qe = q_indexes[i]
