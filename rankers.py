@@ -23,7 +23,6 @@ class Ranker():
     def __init__(self) -> None:
         pass
 
-
     def predict():
         pass
 
@@ -180,7 +179,6 @@ class NLIClassifier(Ranker):
 
 
 class BART:
-    # test bart
     def __init__(self, sentence_limit=20, summary_max_length=50, rerank_threshold=0.5, **kwargs):
         super().__init__()
         self.encoder_name = "facebook/bart-large-cnn"  # sshleifer/distilbart-cnn-12-6
