@@ -63,7 +63,8 @@ def main():
         q_outs, r_outs = ranker.predict(
             queries=query_sents, responses=respo_sents,
             q_indexes=q_ind, r_indexes=r_ind,
-            indexes=df_["id"])
+            indexes=df_["id"],
+            exact_search_topk=config.exact_search_topk)
         if not args.test:
             scores = eval_text(q_outs, r_outs, q_true, r_true)
     else:

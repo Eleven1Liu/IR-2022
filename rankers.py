@@ -255,6 +255,8 @@ class GPL:
         self.gpl_checkpoint_path = gpl_checkpoint_path
         self._load_model()
 
+        # Reranker
+        # self.reranker = BART()
         os.makedirs(self.qgen_dir, exist_ok=True)
 
     def _load_model(self):
@@ -264,7 +266,7 @@ class GPL:
         sbert = models.SentenceBERT(sep=" ")
         sbert.q_model = model
         sbert.doc_model = model
-        self.dense_retriever = DRES(sbert, batch_size=16)
+        self.dense_retriever = DRES(sbert, batch_size=16, show_progress_bar=False)
 
     def _load_qgen_corpus(self, passages, indexes, prefix):
         """Load corpus for question generation. Write corpus to `qgen_dir/{prefix}corpus.jsonl`
@@ -303,7 +305,7 @@ class GPL:
                 corpus,
                 output_dir=self.qgen_dir,
                 ques_per_passage=self.ques_per_passage,
-                prefix=prefix,
+                prefix=f"{prefix}qgen",
                 batch_size=batch_sz
             )
             logging.info(f"Write generated queries to {query_path}.")
@@ -344,7 +346,7 @@ class GPL:
         df_merged = df_rel.merge(df, on=["query-id"])
         return df_merged
 
-    def predict(self, queries, responses, q_indexes, r_indexes, indexes):
+    def predict(self, queries, responses, q_indexes, r_indexes, indexes, exact_search_topk=3):
         num_instances = len(q_indexes)
         q_outs, r_outs = list(), list()
 
@@ -364,7 +366,9 @@ class GPL:
 
             rs, re = r_indexes[i]
             pred_res = self.predict_one(
-                responses[rs:re], df_r[df_r["corpus-id"] == indexes[i]])
+                sentences=responses[rs:re],
+                df_question=df_r[df_r["corpus-id"] == indexes[i]],
+                top_k=exact_search_topk)
             r_outs.append(pred_res)
         return q_outs, r_outs
 
@@ -376,11 +380,17 @@ class GPL:
         }
         pred_res = self.select_sentences_by_retrieve_results(
             corpus, questions, top_k=top_k)
+        # make a guess: return the first sentence of the queries
+        # in case the generated questions is not good
+        if pred_res is None:
+            # preds = self.reranker.summarize(sentences)
+            # pred_res = self.reranker.rerank_sentences(preds, sentences)
+            pred_res = "" #" ".join(sentences) # ""
         return pred_res
 
     def combine_sentences_by_sliding_window(self, sentences, window_szs=None):
         if window_szs is None:
-            window_szs = [1, 2, 3]
+            window_szs = [1, 2, 3, 4]
 
         corpus = dict()
         corpus_id = 0
@@ -406,6 +416,8 @@ class GPL:
                 score_dict[x]) / len(score_dict[x]))
             return corpus[max_idx]["text"]
 
-        # make a guess: return the first sentence of the queries
-        # in case the generated questions is not good
-        return corpus.get(0).get("text", "")
+        return corpus.get(0)
+
+
+    def rerank_by_s():
+        pass
