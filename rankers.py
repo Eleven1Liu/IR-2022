@@ -179,10 +179,11 @@ class NLIClassifier(Ranker):
 
 
 class BART:
-    def __init__(self, sentence_limit=20, summary_max_length=50, rerank_threshold=0.5, **kwargs):
+    def __init__(self, sentence_limit=20, summary_max_length=50, rerank_threshold=0.5, gpl_checkpoint_path=None, **kwargs):
         super().__init__()
         self.encoder_name = "facebook/bart-large-cnn"  # sshleifer/distilbart-cnn-12-6
         self.cross_encoder_name = "cross-encoder/stsb-distilroberta-base"
+        self.gpl_checkpoint_path = gpl_checkpoint_path
         self.sentence_limit = sentence_limit # sentence num for summarization after SBD
         self.summary_max_length = summary_max_length
         self.rerank_threshold = rerank_threshold
@@ -199,6 +200,7 @@ class BART:
         self.model = BartForConditionalGeneration.from_pretrained(
             self.encoder_name).to(self.device)
         self.cross_model = CrossEncoder(self.cross_encoder_name)
+        self.reranker = SentenceTransformer(self.gpl_checkpoint_path)
 
     def predict(self, queries, responses, q_indexes, r_indexes, rerank_sentences=True):
         num_instances = len(q_indexes)
@@ -209,9 +211,13 @@ class BART:
             q_preds = self.summarize(queries[qs:qe])
             r_preds = self.summarize(responses[rs:re])
 
-            if rerank_sentences:
+            if rerank_sentences and self.gpl_checkpoint_path is None:
                 q_preds = self.rerank_sentences(q_preds, queries[qs:qe])
                 r_preds = self.rerank_sentences(r_preds, responses[rs:re])
+            else:
+                q_preds = self.rerank_gpl(q_preds, queries[qs:qe])
+                r_preds = self.rerank_gpl(r_preds, responses[rs:re])
+
             q_outs.append(q_preds)
             r_outs.append(r_preds)
         return q_outs, r_outs
@@ -236,6 +242,17 @@ class BART:
         indexes = np.where(similarity_scores > self.rerank_threshold)[0]
         return " ".join([sentences[ind] for ind in indexes])
 
+    def rerank_gpl(self, summary, sentences):
+        summary_embedding = self.reranker.encode(summary, show_progress_bar=False)
+        similarity_scores = list()
+        for sent in sentences:
+            sent_embedding = self.reranker.encode(
+                sent, show_progress_bar=False)
+            cos_sim = util.cos_sim(sent_embedding, summary_embedding)
+            similarity_scores.append(cos_sim.item())
+        similarity_scores = np.array(similarity_scores)
+        indexes = np.where(similarity_scores > self.rerank_threshold)[0]
+        return " ".join([sentences[ind] for ind in indexes])
 
 class GPL:
     """T5QGen + DenseRetrievalExactSearch
@@ -255,8 +272,6 @@ class GPL:
         self.gpl_checkpoint_path = gpl_checkpoint_path
         self._load_model()
 
-        # Reranker
-        # self.reranker = BART()
         os.makedirs(self.qgen_dir, exist_ok=True)
 
     def _load_model(self):
@@ -383,9 +398,7 @@ class GPL:
         # make a guess: return the first sentence of the queries
         # in case the generated questions is not good
         if pred_res is None:
-            # preds = self.reranker.summarize(sentences)
-            # pred_res = self.reranker.rerank_sentences(preds, sentences)
-            pred_res = "" #" ".join(sentences) # ""
+            pred_res = " ".join(sentences) # ""
         return pred_res
 
     def combine_sentences_by_sliding_window(self, sentences, window_szs=None):
@@ -398,7 +411,7 @@ class GPL:
             for window_sz in window_szs:
                 if i + window_sz >= len(sentences):
                     break
-                corpus[corpus_id] = {'text': " ".join(sentences[i:i+window_sz])}
+                corpus[corpus_id] = {"text": " ".join(sentences[i:i+window_sz])}
                 corpus_id += 1
         return corpus
 
@@ -415,9 +428,7 @@ class GPL:
             max_idx = max(score_dict, key=lambda x: sum(
                 score_dict[x]) / len(score_dict[x]))
             return corpus[max_idx]["text"]
-
         return corpus.get(0)
 
-
-    def rerank_by_s():
+    def rerank():
         pass
