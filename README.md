@@ -18,4 +18,5 @@ python main.py --config config/bart.yml --test
 ```
 
 ## Team members
+Coming out the ideas and solutions with @Jacky-15.
 Jie-Jyun Liu, Kuang-Heng Ching
