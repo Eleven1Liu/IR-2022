@@ -1,0 +1,7 @@
+train_path: data/train.csv
+test_path: data/test.csv
+ranker: BART
+rerank_threshold: 0.5
+comma_split: false
+output_path: output/20221207_bart_max_sz_20_2_test.csv
+summary_max_length: 20
