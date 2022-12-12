@@ -240,7 +240,7 @@ class BART:
         similarity_scores = self.cross_model.predict(
             sentence_combinations, show_progress_bar=False)
         indexes = np.where(similarity_scores > self.rerank_threshold)[0]
-        return " ".join([sentences[ind] for ind in indexes])
+        return " ".join([sentences[ind] for ind in indexes]) if len(indexes) > 0 else summary.replace('\"', "")
 
     def rerank_gpl(self, summary, sentences):
         summary_embedding = self.reranker.encode(summary, show_progress_bar=False)
@@ -253,6 +253,7 @@ class BART:
         similarity_scores = np.array(similarity_scores)
         indexes = np.where(similarity_scores > self.rerank_threshold)[0]
         return " ".join([sentences[ind] for ind in indexes])
+
 
 class GPL:
     """T5QGen + DenseRetrievalExactSearch

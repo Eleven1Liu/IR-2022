@@ -1,6 +1,6 @@
 # Final Project
 
-## How to reproduce the result?
+## How to reproduce the best result?
 
 ```bash
 python main.py --config config/bart.yml --test
