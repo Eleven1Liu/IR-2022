@@ -1,3 +1,8 @@
 train_path: data/train.csv
+test_path: data/test.csv
 ranker: CosSimilarity
-output_path: output/predictions.csv
+output_path: output/cos-test.csv
+comma_split: false
+
+# cos:             0.600664548026615
+# cos+comma-split: 0.4974343469809352
