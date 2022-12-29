@@ -1,0 +1,5 @@
+train_path: data/train.csv
+test_path: data/test.csv
+ranker: NLI
+output_path: output/nli-test.csv
+comma_split: false

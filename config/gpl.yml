@@ -1,7 +1,7 @@
 train_path: data/train.csv
 test_path: data/test.csv
 ranker: GPL
-gpl_checkpoint_path: /home/eleven/dev/gpl/output/tbrain/140000 # path to gpl checkpoint
+gpl_checkpoint_path: output/140000 # path to gpl checkpoint
 ques_per_passage: 15
 exact_search_topk: 3
 qgen_dir: output/qgen-test-qps15 # we also uploaded the files of running GPL with the testing data
