@@ -17,6 +17,26 @@ Run with:
 python main.py --config config/bart.yml --test
 ```
 
+## How to run other algorithms?
+### Cosine Similarity
+```bash
+python main.py --config config/baseline.yml --test
+```
+### Classification (NLI)
+```bash
+python main.py --config config/nli.yml --test
+```
+
+### Classification (Binary)
+```bash
+python main.py --config config/binary_classifier.yml --test
+```
+
+### GPL
+```bash
+python main.py --config config/gpl.yml --test
+```
+
 ## Team members
 Coming out the ideas and solutions with @Jacky-15.
 

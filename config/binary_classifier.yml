@@ -1,0 +1,7 @@
+train_path: data/train.csv
+test_path: data/test.csv
+libmultilabel_test_path: output/libmultilabel-test.txt
+predict_path: output/predictions.txt # path to `predictions.txt`
+ranker: NLIClassifier
+data_dir: /home/eleven/dev/LibMultiLabel/data/nli
+output_path: output/binary_classifcation_test.csv
