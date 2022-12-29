@@ -48,11 +48,12 @@ def main():
     # Rankers
     ranker = getattr(sys.modules[__name__], config.ranker)(**config)
     if config.ranker == "NLIClassifier":
-        df_test = ranker.load_test_data(config.test_path)
+        df_test = ranker.load_test_data(config.libmultilabel_test_path)
         scores = ranker.load_prediction(config.predict_path)
         selected_indexes = ranker.rank(df_test, scores)
         sentence_pairs = df_test.loc[selected_indexes]["text"]
-        q_true, r_true = group_ground_truth(df[df["id"].isin(df_test["id"])])
+        if not args.test:
+            q_true, r_true = group_ground_truth(df[df["id"].isin(df_test["id"])])
         q_outs, r_outs, scores = eval_sentence_pairs(
             sentence_pairs, q_true, r_true)
     elif config.ranker == "BART":

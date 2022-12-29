@@ -52,7 +52,7 @@ def eval(queries, responses, q_indexes, r_indexes, selected_indexes, q_true=None
     return q_outs, r_outs, scores
 
 
-def eval_sentence_pairs(sentence_pairs, q_true, r_true):
+def eval_sentence_pairs(sentence_pairs, q_true=None, r_true=None):
     """Calculate prediction score for NLIClassifier.
 
     Args:
@@ -61,13 +61,14 @@ def eval_sentence_pairs(sentence_pairs, q_true, r_true):
         r_true (list): list of ground truth responses
     """
     q_outs, r_outs, scores = list(), list(), list()
-    N = len(q_true)
+    N = len(sentence_pairs)
     for i, text in enumerate(sentence_pairs):
         q_pred, r_pred = [t.strip() for t in text.split("[SEP]")]
-        s = score_one(q_pred, r_pred, q_true[i], r_true[i])
         q_outs.append(q_pred)
         r_outs.append(r_pred)
-        scores.append(s)
+        if q_true is not None and r_true is not None:
+            s = score_one(q_pred, r_pred, q_true[i], r_true[i])
+            scores.append(s)
 
     final_score = sum(scores) / (2*N)
     logging.info(f"Score: {final_score}")

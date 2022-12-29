@@ -404,7 +404,7 @@ class GPL:
 
     def combine_sentences_by_sliding_window(self, sentences, window_szs=None):
         if window_szs is None:
-            window_szs = [1, 2, 3, 4]
+            window_szs = [2, 3, 4]
 
         corpus = dict()
         corpus_id = 0
